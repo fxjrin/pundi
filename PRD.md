@@ -4,7 +4,7 @@
 
 Mata Kuliah: Pemrograman Web 2 (UAS)
 Versi dokumen: 1.0
-Status: Draft untuk direview
+Status: Final
 
 ---
 
@@ -57,12 +57,14 @@ keuangannya secara instan.
    kategori, mengisi jumlah, tanggal, dan catatan opsional, lalu menyimpan.
 
    **Alternatif: Scan Struk.** Alih-alih mengisi manual, pengguna menekan
-   "Scan Struk", mengambil foto struk belanja lewat kamera, sistem mengirim foto
-   ke layanan AI (Gemini) yang mengembalikan dugaan nama merchant, tanggal,
-   total nominal, dan kategori. Hasil dugaan ini mengisi form "Tambah
-   Transaksi" secara otomatis, tetapi *tidak langsung tersimpan*: pengguna
-   tetap harus meninjau, mengoreksi field yang salah bila perlu, lalu menekan
-   "Simpan" secara eksplisit sebelum data benar-benar masuk sebagai transaksi.
+   "Scan Struk" lalu memilih memotret struk lewat kamera langsung (live
+   preview di dalam aplikasi) atau mengunggah foto yang sudah ada. Sistem
+   mengirim foto ke layanan AI (Gemini) yang mengembalikan dugaan nama
+   merchant, tanggal, total nominal, dan kategori. Hasil dugaan ini mengisi
+   form "Tambah Transaksi" secara otomatis, tetapi *tidak langsung tersimpan*:
+   pengguna tetap harus meninjau, mengoreksi field yang salah bila perlu, lalu
+   menekan "Simpan" secara eksplisit sebelum data benar-benar masuk sebagai
+   transaksi.
 5. Transaksi baru langsung muncul di daftar transaksi dan ringkasan dashboard
    ter-update (saldo, breakdown kategori, grafik tren).
 6. Pengguna membuka halaman **Kategori** untuk menambah kategori custom di luar
@@ -109,7 +111,7 @@ keuangannya secara instan.
 | F15 | Export Laporan CSV | User dapat mengunduh riwayat transaksinya dalam format CSV. | Opsional |
 | F16 | Admin Dashboard | Admin melihat statistik agregat aplikasi (total user, total transaksi, total kategori global) tanpa akses ke detail data pribadi user. | Wajib |
 | F17 | Kelola Kategori Global | Admin dapat menambah atau menonaktifkan kategori default yang berlaku untuk semua user baru. | Opsional |
-| F18 | Scan Struk dengan AI | User mengambil foto struk belanja lewat kamera. Sistem mengirim gambar ke Gemini API dan menerima kembali dugaan nama merchant, tanggal, total nominal, dan kategori dalam format terstruktur (JSON). Hasil dugaan mengisi form transaksi secara otomatis, tetapi wajib ditinjau dan dikonfirmasi user sebelum tersimpan sebagai transaksi asli (tidak ada data yang masuk tanpa konfirmasi eksplisit). | Wajib |
+| F18 | Scan Struk dengan AI | User memotret struk belanja lewat kamera langsung (live preview) di dalam aplikasi, atau mengunggah foto yang sudah ada. Sistem mengirim gambar ke Gemini API dan menerima kembali dugaan nama merchant, tanggal, total nominal, dan kategori dalam format terstruktur (JSON). Hasil dugaan mengisi form transaksi secara otomatis, tetapi wajib ditinjau dan dikonfirmasi user sebelum tersimpan sebagai transaksi asli (tidak ada data yang masuk tanpa konfirmasi eksplisit). | Wajib |
 
 ---
 
@@ -124,9 +126,9 @@ keuangannya secara instan.
 | Charting | Recharts |
 | Backend | Vercel Functions (serverless, Node.js runtime), TypeScript |
 | ORM | Drizzle ORM |
-| Database | Vercel Postgres (Neon), diakses lewat Neon serverless HTTP driver |
+| Database | Neon Postgres (provisioning lewat integrasi Vercel Marketplace), diakses lewat Neon serverless HTTP driver |
 | Validasi | Zod (dipakai di client untuk UX, dan di setiap function backend sebagai validasi wajib) |
-| Autentikasi | JWT custom (jsonwebtoken/jose), password hashing dengan bcrypt |
+| Autentikasi | JWT custom (jose), password hashing dengan bcrypt |
 | AI (Scan Struk) | Gemini API (`@google/genai`, model `gemini-2.5-flash`), dipanggil dari backend saja, dengan `responseSchema` agar hasilnya berupa JSON terstruktur, bukan teks bebas |
 | Deployment | Vercel (frontend, backend function, dan database provisioning dalam satu project) |
 | Version Control | Git + GitHub |
@@ -174,6 +176,9 @@ keduanya berada di domain yang sama.
 
 - Responsif untuk mobile dan desktop (mobile-first, karena pencatatan transaksi
   harian realistisnya dilakukan dari HP).
+- Navigasi mobile memakai bottom tab bar (Dashboard, Transaksi, Budget, Lainnya)
+  yang selalu terlihat; form dan dialog tampil sebagai bottom sheet yang slide-up
+  dari bawah layar di mobile, sedangkan di desktop tetap berupa modal mengambang.
 - Mendukung browser modern (Chrome, Edge, Firefox, Safari versi terbaru).
 
 ---
@@ -244,7 +249,7 @@ erDiagram
 
 ---
 
-## 6. API Overview (referensi teknis, bukan bagian wajib format PRD)
+## 6. API Overview
 
 | Method | Endpoint | Fitur terkait | Akses |
 |---|---|---|---|
@@ -252,21 +257,11 @@ erDiagram
 | POST | `/api/auth/login` | F02 | Publik |
 | POST | `/api/auth/logout` | F03 | User |
 | GET/PUT | `/api/profile` | F04 | User |
-| GET/POST | `/api/transactions` | F05, F06 | User |
-| PUT/DELETE | `/api/transactions/:id` | F07, F08 | User (pemilik data) |
-| GET/POST | `/api/categories` | F09, F10 | User |
-| DELETE | `/api/categories/:id` | F09 | User (pemilik data) |
-| GET/POST | `/api/budgets` | F11 | User |
-| GET | `/api/dashboard/summary` | F12, F13, F14 | User |
+| GET/POST/PUT/DELETE | `/api/transactions` (`PUT`/`DELETE` lewat query `?id=`) | F05-F08 | User (pemilik data) |
 | GET | `/api/transactions/export` | F15 | User |
+| GET/POST/DELETE | `/api/categories` (`DELETE` lewat query `?id=`) | F09, F10 | User (pemilik data untuk hapus) |
+| GET/POST/DELETE | `/api/budgets` (`DELETE` lewat query `?id=`) | F11 | User (pemilik data untuk hapus) |
+| GET | `/api/dashboard/summary` | F12, F13, F14 | User |
 | GET | `/api/admin/stats` | F16 | Admin |
-| POST/PATCH | `/api/admin/categories` | F17 | Admin |
+| GET/POST/PATCH | `/api/admin/categories` (`PATCH` lewat query `?id=`) | F17 | Admin |
 | POST | `/api/receipts/scan` | F18 | User |
-
----
-
-## 7. Catatan Pengumpulan
-
-Dokumen ini perlu diekspor ke format PDF sebelum dikumpulkan (sesuai ketentuan
-soal). Bisa pakai "Print to PDF" dari preview Markdown, atau `pandoc PRD.md -o
-PRD.pdf`, setelah dokumen ini final direview.
