@@ -1,4 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/((?!api/|@|src/|node_modules/|.*\\.\\w+$).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/receipts/scan.ts": {
+      "maxDuration": 30
+    }
+  }
 }
