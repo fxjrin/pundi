@@ -39,7 +39,10 @@ export function LiveCameraCapture(props: LiveCameraCaptureProps) {
     let cancelled = false
 
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+      .getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, aspectRatio: { ideal: 3 / 4 } },
+        audio: false,
+      })
       .then((stream) => {
         if (cancelled) {
           stopStream(stream)
@@ -95,7 +98,7 @@ export function LiveCameraCapture(props: LiveCameraCaptureProps) {
             playsInline
             muted
             onLoadedMetadata={() => setReady(true)}
-            className="aspect-video w-full rounded-md bg-black object-cover"
+            className="h-[65vh] w-full rounded-md bg-black object-cover md:h-auto md:aspect-video"
           />
         )}
         <Button onClick={handleCapture} disabled={!!error || !ready}>
