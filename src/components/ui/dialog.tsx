@@ -61,11 +61,19 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // Below md: bottom sheet anchored full-width to the viewport edge, sliding up.
+          // At md+: centered floating modal, unchanged from the original behavior.
+          "fixed z-50 grid w-full gap-4 bg-popover px-4 pb-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+          "max-md:inset-x-0 max-md:bottom-0 max-md:max-h-[90vh] max-md:overflow-y-auto max-md:rounded-t-xl max-md:pt-6 max-md:data-open:slide-in-from-bottom max-md:data-closed:slide-out-to-bottom",
+          "md:top-1/2 md:left-1/2 md:max-w-sm md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:pt-4 md:data-open:zoom-in-95 md:data-closed:zoom-out-95",
           className
         )}
         {...props}
       >
+        <div
+          aria-hidden="true"
+          className="absolute top-2 left-1/2 h-1.5 w-10 -translate-x-1/2 rounded-full bg-foreground/15 md:hidden"
+        />
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
