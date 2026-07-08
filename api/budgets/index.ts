@@ -55,3 +55,22 @@ export async function POST(request: Request): Promise<Response> {
 
   return json({ budget })
 }
+
+// Deleted by ?id= query param rather than a /[id] path segment -- this project's plain
+// Vercel Functions setup (no framework) does not support Next.js-style optional catch-all
+// dynamic routes, so list/upsert/delete for budgets share a single function this way,
+// keeping the project under Vercel Hobby's 12-serverless-function limit.
+export async function DELETE(request: Request): Promise<Response> {
+  const auth = await requireUser(request)
+  if (auth instanceof Response) return auth
+
+  const id = new URL(request.url).searchParams.get('id')
+  if (!id) return errorJson('id is required', 400)
+
+  const [budget] = await db.select().from(budgets).where(eq(budgets.id, id)).limit(1)
+  if (!budget) return errorJson('Budget not found', 404)
+  if (budget.userId !== auth.id) return errorJson('Forbidden', 403)
+
+  await db.delete(budgets).where(eq(budgets.id, id))
+  return json({ message: 'Budget deleted' })
+}

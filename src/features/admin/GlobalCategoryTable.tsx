@@ -35,7 +35,7 @@ function useCreateGlobalCategory() {
 function useToggleGlobalCategory() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => api.patch<{ category: Category }>(`/api/admin/categories/${id}`),
+    mutationFn: (id: string) => api.patch<{ category: Category }>(`/api/admin/categories?id=${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'categories'] }),
   })
 }

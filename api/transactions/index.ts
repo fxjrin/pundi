@@ -5,6 +5,18 @@ import { json, errorJson } from '../_lib/response.js'
 import { requireUser } from '../_lib/auth.js'
 import { createTransactionSchema, transactionQuerySchema } from '../../shared/schemas/transaction.js'
 
+// Update/delete use ?id= query param rather than a /[id] path segment -- this project's
+// plain Vercel Functions setup (no framework) does not support Next.js-style optional
+// catch-all dynamic routes, so list/create/update/delete share a single function this
+// way, keeping the project under Vercel Hobby's 12-serverless-function limit. export.ts
+// stays a separate function since it is a distinct read-only report, not a CRUD op.
+async function loadOwnedTransaction(id: string, userId: string) {
+  const [transaction] = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1)
+  if (!transaction) return { error: errorJson('Transaction not found', 404) }
+  if (transaction.userId !== userId) return { error: errorJson('Forbidden', 403) }
+  return { transaction }
+}
+
 export async function GET(request: Request): Promise<Response> {
   const auth = await requireUser(request)
   if (auth instanceof Response) return auth
@@ -69,4 +81,45 @@ export async function POST(request: Request): Promise<Response> {
     .returning()
 
   return json({ transaction }, 201)
+}
+
+export async function PUT(request: Request): Promise<Response> {
+  const auth = await requireUser(request)
+  if (auth instanceof Response) return auth
+
+  const id = new URL(request.url).searchParams.get('id')
+  if (!id) return errorJson('id is required', 400)
+  const { error } = await loadOwnedTransaction(id, auth.id)
+  if (error) return error
+
+  const body = await request.json().catch(() => null)
+  const parsed = createTransactionSchema.safeParse(body)
+  if (!parsed.success) return errorJson('Invalid input', 400, parsed.error.flatten())
+  const { type, categoryId, amount, note, transactionDate, source } = parsed.data
+
+  const [category] = await db.select().from(categories).where(eq(categories.id, categoryId)).limit(1)
+  if (!category) return errorJson('Category not found', 404)
+  if (category.userId !== null && category.userId !== auth.id) return errorJson('Forbidden', 403)
+  if (category.type !== type) return errorJson(`This category is for ${category.type}, not ${type}`, 400)
+
+  const [transaction] = await db
+    .update(transactions)
+    .set({ type, categoryId, amount, note, transactionDate, source })
+    .where(eq(transactions.id, id))
+    .returning()
+
+  return json({ transaction })
+}
+
+export async function DELETE(request: Request): Promise<Response> {
+  const auth = await requireUser(request)
+  if (auth instanceof Response) return auth
+
+  const id = new URL(request.url).searchParams.get('id')
+  if (!id) return errorJson('id is required', 400)
+  const { error } = await loadOwnedTransaction(id, auth.id)
+  if (error) return error
+
+  await db.delete(transactions).where(eq(transactions.id, id))
+  return json({ message: 'Transaction deleted' })
 }

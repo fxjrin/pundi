@@ -51,7 +51,7 @@ export function useUpsertBudget() {
 export function useDeleteBudget() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => api.delete(`/api/budgets/${id}`),
+    mutationFn: (id: string) => api.delete(`/api/budgets?id=${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })

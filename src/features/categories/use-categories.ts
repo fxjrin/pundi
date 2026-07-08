@@ -30,7 +30,7 @@ export function useCreateCategory() {
 export function useDeleteCategory() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => api.delete(`/api/categories/${id}`),
+    mutationFn: (id: string) => api.delete(`/api/categories?id=${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
   })
 }
